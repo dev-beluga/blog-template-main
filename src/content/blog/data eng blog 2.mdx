@@ -1,0 +1,188 @@
+---
+heroImage: ../../assets/images/Google_Cloud_Terraform.png
+category: Data Engineering
+description: Containerization and Infrastructure as Code Part 2
+pubDate: 2024-01-27T21:00:00.000Z
+tags:
+  - JUPYTER-NOTEBOOK
+  - DOCKER-COMPOSE
+  - PYTHON
+  - DOCKER
+  - POSTGRESQL
+  - SQL
+title: 'Data Engineering Zoomcamp, Week 2: Terraform  for GCP Infra'
+---
+
+## Data Engineering Zoomcamp, Week 2
+
+### Project infrastructure modules in GCP:
+
+* Google Cloud Storage (GCS): Data Lake
+* BigQuery: Data Warehouse
+
+### Initial Setup
+
+For this course, we'll use a free version (upto EUR 300 credits).
+
+1. Create an account with your Google email ID
+2. Setup your first [project](https://console.cloud.google.com/) if you haven't already
+   * eg. "DTC DE Course", and note down the "Project ID" (we'll use this later when deploying infra with TF)
+3. Setup [service account & authentication](https://cloud.google.com/docs/authentication/getting-started) for this project
+   * Grant Viewer role to begin with.
+   * Download service-account-keys (.json) for auth.
+4. Download [SDK](https://cloud.google.com/sdk/docs/quickstart) for local setup
+5. Set environment variable to point to your downloaded GCP keys:
+
+```python
+export GOOGLE_APPLICATION_CREDENTIALS = "<path/to/your/service-account-authkeys>.json"
+export GOOGLE_APPLICATION_CREDENTIALS = ".../keys/gcp-cred.json"
+
+# Refresh token / session, and verify authentication
+gcloud auth application -default login
+```
+
+### Setup for Access
+
+1. [IAM Roles](https://cloud.google.com/storage/docs/access-control/iam-roles) for Service account:
+   * Go to the IAM section of IAM & Admin [https://console.cloud.google.com/iam-admin/iam](https://console.cloud.google.com/iam-admin/iam)
+   * Click the Edit principal icon for your service account.
+   * Add these roles in addition to Viewer : Storage Admin + Storage Object Admin + BigQuery Admin
+2. Enable these APIs for your project:
+   * [https://console.cloud.google.com/apis/library/iam.googleapis.com](https://console.cloud.google.com/apis/library/iam.googleapis.com)
+   * [https://console.cloud.google.com/apis/library/iamcredentials.googleapis.com](https://console.cloud.google.com/apis/library/iamcredentials.googleapis.com)
+3. Please ensure GOOGLE\_APPLICATION\_CREDENTIALS env-var is set.
+
+```python
+export GOOGLE_APPLICATION_CREDENTIALS = "<path/to/your/service-account-authkeys>.json"
+```
+
+### Terraform Overview
+
+Terraform is an open-source infrastructure-as-code tool developed by HashiCorp. It allows users to define and provision data center infrastructure using a declarative configuration language called HashiCorp Configuration Language (HCL).
+
+1. What is [Terraform](https://www.terraform.io/)?
+   * open-source tool by [HashiCorp](https://www.hashicorp.com/), used for provisioning infrastructure resources
+   * supports DevOps best practices for change management
+   * Managing configuration files in source control to maintain an ideal provisioning state for testing and production environments
+2. What is IaC?
+   * Infrastructure-as-Code
+   * build, change, and manage your infrastructure in a safe, consistent, and repeatable way by defining resource configurations that you can version, reuse, and share.
+3. Some advantages
+   * Infrastructure lifecycle management
+   * Version control commits
+   * Very useful for stack-based deployments, and with cloud providers such as AWS, GCP, Azure, K8S…
+   * State-based approach to track resource changes throughout deployments
+
+#### Declarations
+
+* **terraform**: configure basic Terraform settings to provision your infrastructure
+  * **required\_version**: minimum Terraform version to apply to your configuration
+  * **backend**: stores Terraform's "state" snapshots, to map real-world resources to your configuration.
+    * **local**: stores state file locally as terraform.tfstate
+  * **required\_providers**: specifies the providers required by the current module
+* **provider**:
+  * adds a set of resource types and/or data sources that Terraform can manage
+  * The Terraform Registry is the main directory of publicly available providers from most major infrastructure platforms.
+* **resource**
+  * blocks to define components of your infrastructure
+  * Project modules/resources: google\_storage\_bucket, google\_bigquery\_dataset, google\_bigquery\_table
+* **variable** & **locals**
+  * runtime arguments and constants
+
+##### Terraform sample
+
+```hcl
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "4.51.0"
+    }
+  }
+}
+
+provider "google" {
+  # Credentials only needs to be set if you do not have the GOOGLE_APPLICATION_CREDENTIALS set
+  # credentials = "../../keys/gcp-cred.json"
+  project = "terrform-demo-412419"
+  region = "us-central1"
+  zone = "us-central1-c"
+
+}
+
+
+resource "google_storage_bucket" "terra-demo" {
+  name = "terrform-demo-412419-bucket"
+  location = "US"
+  force_destroy = true
+
+
+  lifecycle_rule {
+    condition {
+      age = 1
+    }
+    action {
+      type = "AbortIncompleteMultipartUpload"
+    }
+  }
+}
+
+
+Variables in Terraform
+
+
+resource "google_bigquery_dataset" "demo_dataset" {
+  dataset_id = "ny_taxi_dataset"
+
+}
+
+variable "credentials" {
+  description = "My Credentials"
+  default     = "../../keys/gcp-cred.json"
+}
+
+variable "project" {
+  description = "Project"
+  default     = "terrform-demo-412419"
+}
+
+variable "region" {
+  description = "Region"
+  default     = "us-central1"
+}
+
+variable "location" {
+  description = "Project Location"
+  default     = "US"
+}
+
+variable "bq_dataset_name" {
+  description = "My BigQuery Dataset Name"
+  default     = "ny_taxi_dataset"
+}
+
+variable "gcs_bucket_name" {
+  description = "My Storage Bucket Name"
+  default     = "terraform-ny-taxi-bucket"
+}
+
+variable "gcs_storage_class" {
+  description = "Bucket Storage Class"
+  default     = "STANDARD"
+}
+```
+
+#### Execution steps
+
+\# Refresh service-account's auth-token for this session
+
+gcloud auth application-default login
+
+1. terraform init:
+   * Initializes & configures the backend, installs plugins/providers, & checks out an existing configuration from a version control
+2. terraform plan:
+   * Matches/previews local changes against a remote state, and proposes an Execution Plan.
+3. terraform apply:
+   * Asks for approval to the proposed plan, and applies changes to cloud
+4. terraform destroy
+   * Removes your stack from the Cloud

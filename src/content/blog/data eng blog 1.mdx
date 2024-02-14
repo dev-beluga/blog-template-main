@@ -1,8 +1,8 @@
 ---
 heroImage: /src/assets/images/week1.png
-category: Data Engineering
-description: Containerization and Infrastructure as Code
-pubDate: 2024-01-27T21:00:00.000Z
+category: 'Data Engineering'
+description: Containerization and Infrastructure as Code Part 1
+pubDate: 2024-01-25T21:00:00.000Z
 tags:
   - JUPYTER-NOTEBOOK
   - DOCKER-COMPOSE
@@ -10,16 +10,16 @@ tags:
   - DOCKER
   - POSTGRESQL
   - SQL
-title: 'Data Engineering Zoomcamp, Week 1: Data Ingestion with Docker'
+title: 'Data Engineering Zoomcamp, Module 1: Data Ingestion with Docker'
 ---
 
-# Data Engineering Zoomcamp , Module 1
+## Data Engineering Zoomcamp , Week 1
 
 ## 2024 Cohort
 
-* Starts: 15 January 2024 (Monday) at 17:00 CET
-* [Cohort folder](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/cohorts/2024) with homeworks and deadlines
-* [Launch stream with course overview](https://www.youtube.com/live/AtRhA-NfS24?si=5JzA_E8BmJjiLi8l)
+- Starts: 15 January 2024 (Monday) at 17:00 CET
+- [Cohort folder](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/cohorts/2024) with homeworks and deadlines
+- [Launch stream with course overview](https://www.youtube.com/live/AtRhA-NfS24?si=5JzA_E8BmJjiLi8l)
 
 ### **Overview**![](/src/assets/images/arch_v3_workshops.jpg)
 
@@ -33,35 +33,35 @@ To get the most out of this course, you should feel comfortable with coding and 
 
 > Welcome to my blog about my first week in the **Data Engineering Zoomcamp!** In this first module, we will be exploring containerization and infrastructure as code. This is an exciting topic as it allows us to create reproducible and scalable environments for our data pipelines.
 
-* Throughout the week, we will be building a ***data pipeline*** using Python scripts to ingest data from a CSV source and store it in a table in ***Postgres***. We will be using ***Docker*** to containerize our environment and make it easy to deploy and manage. Additionally, we will be using pgcli, a command-line interface for Postgres, to interact with our database.
-* To start, we will be using ***Jupyter Notebook*** to ingest our data and then move on to using ***pgAdmin***, a web-based interface for Postgres, also running in Docker. We will also be using ***argparse*** to create a command-line interface for our Python script, making it easy to pass in arguments and customize our pipeline.
-* Finally, we will be using ***Docker Compose*** to orchestrate our containers and run both Postgres and pgAdmin together. This will allow us to easily manage our environment and ensure that our pipeline is running smoothly.
+- Throughout the week, we will be building a **_data pipeline_** using Python scripts to ingest data from a CSV source and store it in a table in **_Postgres_**. We will be using **_Docker_** to containerize our environment and make it easy to deploy and manage. Additionally, we will be using pgcli, a command-line interface for Postgres, to interact with our database.
+- To start, we will be using **_Jupyter Notebook_** to ingest our data and then move on to using **_pgAdmin_**, a web-based interface for Postgres, also running in Docker. We will also be using **_argparse_** to create a command-line interface for our Python script, making it easy to pass in arguments and customize our pipeline.
+- Finally, we will be using **_Docker Compose_** to orchestrate our containers and run both Postgres and pgAdmin together. This will allow us to easily manage our environment and ensure that our pipeline is running smoothly.
 
 ### Docker
 
-* **Docker** is an open platform that allows you to develop, ship, and run applications. It enables you to separate your applications from your infrastructure, making it easier to deliver software quickly.
-* You run this box on a host machine. The container is completely isolated from the host machine env.
-* You can run multiple containers on one host and they won’t have any conflict.
-* An image = set of instructions that were executed + state. All saved in “image”
-* Installing docker: [https://docs.docker.com/get-docker/](https://www.google.com/url?q=https://docs.docker.com/get-docker/\&sa=D\&source=editors\&ust=1707903551590833\&usg=AOvVaw19OtX1dpPboX7QnMbqo_nQ)
+- **Docker** is an open platform that allows you to develop, ship, and run applications. It enables you to separate your applications from your infrastructure, making it easier to deliver software quickly.
+- You run this box on a host machine. The container is completely isolated from the host machine env.
+- You can run multiple containers on one host and they won’t have any conflict.
+- An image = set of instructions that were executed + state. All saved in “image”
+- Installing docker: [https://docs.docker.com/get-docker/](https://www.google.com/url?q=https://docs.docker.com/get-docker/&sa=D&source=editors&ust=1707903551590833&usg=AOvVaw19OtX1dpPboX7QnMbqo_nQ)
 
 #### Why should data engineers care about containerization and docker?
 
-* Setting up things locally for experiments
-* Integration tests, CI/CD
-* Batch jobs (AWS Batch, Kubernetes jobs, etc — outside of the scope)
-* Spark
-* Serverless (AWS Lambda)
-* So containers are everywhere
+- Setting up things locally for experiments
+- Integration tests, CI/CD
+- Batch jobs (AWS Batch, Kubernetes jobs, etc — outside of the scope)
+- Spark
+- Serverless (AWS Lambda)
+- So containers are everywhere
 
 ### Postgres
 
 PostgreSQL is a powerful, open-source object-relational database system with over 35 years of active development. It is known for its reliability, feature robustness, and performance. PostgreSQL supports both SQL (relational) and JSON (non-relational) querying, making it suitable for a wide range of applications, including web, mobile, geospatial, and analytics applications.
 
-* For practicing with SQL, we’ll use Postgres
-* It’s a general purpose database - for transitions, not for analytics
-* But it’s powerful enough and sometimes also used as a data warehouse - a special database for analytical queries (more in week 3)
-* We can set it up locally to practice SQL and test things before doing this in the cloud
+- For practicing with SQL, we’ll use Postgres
+- It’s a general purpose database - for transitions, not for analytics
+- But it’s powerful enough and sometimes also used as a data warehouse - a special database for analytical queries (more in week 3)
+- We can set it up locally to practice SQL and test things before doing this in the cloud
 
 #### Running postgres with Docker
 
@@ -103,7 +103,7 @@ Not much. Let’s put some data
 
 > According to the TLC data website, from 05/13/2022, the data will be in .parquet format instead of .csv The website has provided a useful link with sample steps to read .parquet file and convert it to Pandas data frame.\
 > \
-> You can use the csv backup located here, [https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow\_tripdata\_2021-01.csv.gz](https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz), to follow along with the video.
+> You can use the csv backup located here, [https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz](https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz), to follow along with the video.
 
 #### pgAdmin
 
@@ -235,7 +235,7 @@ taxi_ingest: v001 \
 
 ### Docker Compose
 
-Docker Compose is a tool for defining and running multi-container applications. It simplifies the control of an entire application stack, making it easy to manage services, networks, and volumes in a single, comprehensible YAML configuration file. With Docker Compose, you can create and start all the services from your configuration file with a single command. 
+Docker Compose is a tool for defining and running multi-container applications. It simplifies the control of an entire application stack, making it easy to manage services, networks, and volumes in a single, comprehensible YAML configuration file. With Docker Compose, you can create and start all the services from your configuration file with a single command.
 
 Run it:
 
@@ -255,7 +255,7 @@ Shutting it down:
 docker-compose down
 ```
 
-Note: to make pgAdmin configuration persistent, create a folder data\_pgadmin. Change its permission via
+Note: to make pgAdmin configuration persistent, create a folder data_pgadmin. Change its permission via
 
 ```shell
 sudo chown 5050: 5050 data_pgadmin
@@ -272,7 +272,7 @@ image: dpage / pgadmin4    volumes:
 
 ## SQL
 
-* Adding the Zones table
+- Adding the Zones table
 
 ```python
 !wget https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv
@@ -300,10 +300,10 @@ pd.read_sql(query, con = engine)
 
 ![](</src/assets/images/Screenshot from 2024-02-14 17-00-57.png>)
 
-* Inner joins
-* Basic data quality checks
-* Left, Right and Outer joins
-* Group by
+- Inner joins
+- Basic data quality checks
+- Left, Right and Outer joins
+- Group by
 
 ```pgsql
 SELECT *

@@ -1,5 +1,5 @@
 ---
-title: 'LLM Zoomcamp Module 1: Building My First RAG System'
+title: 'LLM Zoomcamp Module 1:  Introduction to LLMs and RAG'
 description: 'My hands-on experience with Module 1 of LLM Zoomcamp - from setting up ElasticSearch to building a complete Retrieval-Augmented Generation system that answers questions about course materials.'
 pubDate: '2025-06-16'
 heroImage: '../../assets/images/diagram-retrieval-augmented-generation.png'
@@ -8,7 +8,7 @@ tags: ['LLM', 'RAG', 'ElasticSearch', 'OpenAI', 'Python', 'Vector Search', 'AI',
 draft: false
 ---
 
-# LLM Zoomcamp Module 1: Building My First RAG System
+# LLM Zoomcamp Module 1: Introduction to LLMs and RAG
 
 ## **Overview**![](/src/assets/images/rag-system-diagram.svg)
 
@@ -38,11 +38,11 @@ We used ElasticSearch as our search engine to store and retrieve documents. The 
 
 When a user asks a question, we search through the indexed documents to find the most relevant information. This becomes the "context" for our LLM.
 
-### 3. Generation (OpenAI API)
+### 3. Generation (groq API)
 
-Finally, we send both the user's question and the retrieved context to an LLM (OpenAI's GPT models) to generate a comprehensive answer.
+Finally, we send both the user's question and the retrieved context to an LLM (groq's LLAMA models) to generate a comprehensive answer.
 
-## Getting My Hands Dirty
+## Let's dive right in
 
 ### Setting Up the Environment
 
@@ -180,12 +180,6 @@ And it worked! The system would find relevant FAQ entries and generate coherent,
 - **ElasticSearch's multi-match queries** were incredibly effective for finding relevant documents
 - **Prompt engineering** made a huge difference in response quality
 - **Temperature settings** (I used 0.1) helped keep responses consistent and factual
-
-### Challenges I Faced
-
-- **Context length limits**: Sometimes the retrieved documents were too long for the LLM's context window
-- **Relevance tuning**: Getting the right balance between precision and recall in search results
-- **Cost management**: API calls can add up quickly during development
 
 ### The "Aha!" Moments
 

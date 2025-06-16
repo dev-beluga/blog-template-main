@@ -1,0 +1,214 @@
+---
+title: 'LLM Zoomcamp Module 1: Building My First RAG System'
+description: 'My hands-on experience with Module 1 of LLM Zoomcamp - from setting up ElasticSearch to building a complete Retrieval-Augmented Generation system that answers questions about course materials.'
+pubDate: '2025-06-16'
+heroImage: '../../assets/images/diagram-retrieval-augmented-generation.png'
+category: 'Machine Learning'
+tags: ['LLM', 'RAG', 'ElasticSearch', 'OpenAI', 'Python', 'Vector Search', 'AI', 'Zoomcamp']
+draft: false
+---
+
+# LLM Zoomcamp Module 1: Building My First RAG System
+
+## **Overview**![](/src/assets/images/rag-system-diagram.svg)
+
+Just wrapped up Module 1 of the LLM Zoomcamp by DataTalks.Club, and wow - what a practical introduction to the world of Large Language Models! This wasn't your typical theoretical course. We dove straight into building a real RAG (Retrieval-Augmented Generation) system from scratch.
+
+## What's RAG and Why Should You Care?
+
+Before jumping into the technical details, let me explain what RAG actually is. You know how ChatGPT sometimes makes stuff up (hallucinates)? RAG solves this by giving the LLM access to specific, reliable information before it generates an answer.
+
+The idea is simple but powerful:
+
+1. **Retrieve** relevant information from a knowledge base
+2. **Augment** the user's question with this context
+3. **Generate** an answer based on the retrieved information
+
+It's like giving the AI a cheat sheet before an exam.
+
+## The Architecture We Built
+
+Our RAG system had three main components:
+
+### 1. Document Storage & Search (ElasticSearch)
+
+We used ElasticSearch as our search engine to store and retrieve documents. The dataset? All the FAQ documents from DataTalks.Club courses - perfect for building a course assistant.
+
+### 2. Retrieval System
+
+When a user asks a question, we search through the indexed documents to find the most relevant information. This becomes the "context" for our LLM.
+
+### 3. Generation (OpenAI API)
+
+Finally, we send both the user's question and the retrieved context to an LLM (OpenAI's GPT models) to generate a comprehensive answer.
+
+## Getting My Hands Dirty
+
+### Setting Up the Environment
+
+First things first - getting ElasticSearch running locally:
+
+```bash
+docker run -it \
+  --rm \
+  --name elasticsearch \
+  -p 9200:9200 \
+  -p 9300:9300 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  docker.elastic.co/elasticsearch/elasticsearch:8.4.3
+```
+
+### Document Indexing
+
+The course provided a JSON file with FAQ data from various DataTalks.Club courses. I had to:
+
+- Parse the JSON documents
+- Create an ElasticSearch index with proper mappings
+- Ingest all documents into the search engine
+
+```python
+from elasticsearch import Elasticsearch
+
+es_client = Elasticsearch("http://127.0.0.1:9200")
+
+# Create index with custom settings
+index_settings = {
+    "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0
+    },
+    "mappings": {
+        "properties": {
+            "text": {"type": "text"},
+            "section": {"type": "text"},
+            "question": {"type": "text"},
+            "course": {"type": "keyword"}
+        }
+    }
+}
+```
+
+### Building the Search Function
+
+The search function was where the magic happened. We used ElasticSearch's multi-match query to search across multiple fields with different weights:
+
+```python
+def search_documents(query):
+    search_query = {
+        "size": 5,
+        "query": {
+            "bool": {
+                "must": {
+                    "multi_match": {
+                        "query": query,
+                        "fields": ["question^3", "text", "section"],
+                        "type": "best_fields"
+                    }
+                }
+            }
+        }
+    }
+
+    response = es_client.search(index="course_questions", body=search_query)
+    return [hit["_source"] for hit in response["hits"]["hits"]]
+```
+
+Notice the `^3` in `"question^3"` - this gives the question field 3x more weight than other fields. Smart!
+
+### Prompt Engineering
+
+This was probably the most interesting part. We had to craft prompts that would:
+
+1. Provide clear context from retrieved documents
+2. Give the LLM specific instructions on how to respond
+3. Ensure the model stays grounded in the provided information
+
+```python
+def build_prompt(query, search_results):
+    context = ""
+    for doc in search_results:
+        context += f'Q: {doc["question"]}\nA: {doc["text"]}\n\n'
+
+    prompt = f"""
+You're a course teaching assistant. Answer the QUESTION using only the provided CONTEXT.
+
+QUESTION: {query}
+
+CONTEXT:
+{context}
+"""
+    return prompt
+```
+
+### Putting It All Together
+
+The final RAG function combined everything:
+
+```python
+def rag(query):
+    # 1. Retrieve relevant documents
+    search_results = search_documents(query)
+
+    # 2. Build prompt with context
+    prompt = build_prompt(query, search_results)
+
+    # 3. Generate answer using OpenAI
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.1
+    )
+
+    return response.choices[0].message.content
+```
+
+## Testing the System
+
+The moment of truth! I tested it with questions like:
+
+- "How do I run Kafka?"
+- "What's the difference between batch and streaming processing?"
+- "How do I submit homework?"
+
+And it worked! The system would find relevant FAQ entries and generate coherent, accurate answers based on the course materials.
+
+## Key Insights and Challenges
+
+### What Worked Well
+
+- **ElasticSearch's multi-match queries** were incredibly effective for finding relevant documents
+- **Prompt engineering** made a huge difference in response quality
+- **Temperature settings** (I used 0.1) helped keep responses consistent and factual
+
+### Challenges I Faced
+
+- **Context length limits**: Sometimes the retrieved documents were too long for the LLM's context window
+- **Relevance tuning**: Getting the right balance between precision and recall in search results
+- **Cost management**: API calls can add up quickly during development
+
+### The "Aha!" Moments
+
+- Realizing how much **search quality affects the final answer** - garbage in, garbage out
+- Understanding that **RAG isn't just about fancy AI** - it's fundamentally about information retrieval
+- Seeing how **simple prompts can be more effective** than complex ones
+
+## What's Next?
+
+Module 1 gave me a solid foundation, but there's so much more to explore:
+
+- **Vector search** instead of just text search---
+
+This was honestly one of the most practical AI courses I've taken. Instead of just learning theory, I built something that actually works and could be deployed in the real world.
+
+## Resources
+
+- [LLM Zoomcamp GitHub Repository](https://github.com/DataTalksClub/llm-zoomcamp)
+- [Course FAQ Documents](https://github.com/DataTalksClub/llm-zoomcamp/blob/main/01-intro/documents.json)
+- [ElasticSearch Documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)
+
+---
+
+_Building RAG systems is like being a librarian for an AI - you need to organize information well so the AI can find and use it effectively. The technical implementation is just one part; understanding your data and users' needs is equally important._
+
+Ready to dive deeper into the world of LLMs? The journey has just begun!

@@ -4,7 +4,7 @@ description: 'My hands-on experience with Module 1 of LLM Zoomcamp - from settin
 pubDate: '2025-06-16'
 heroImage: '../../assets/images/diagram-retrieval-augmented-generation.png'
 category: 'Machine Learning'
-tags: ['LLM', 'RAG', 'ElasticSearch', 'OpenAI', 'Python', 'Vector Search', 'AI', 'Zoomcamp']
+tags: ['LLM', 'RAG', 'ElasticSearch', 'groq', 'Python', 'Vector Search', 'AI', 'Zoomcamp']
 draft: false
 ---
 
@@ -12,7 +12,7 @@ draft: false
 
 ## **Overview**![](/src/assets/images/rag-system-diagram.svg)
 
-Just wrapped up Module 1 of the LLM Zoomcamp by DataTalks.Club, and wow - what a practical introduction to the world of Large Language Models! This wasn't your typical theoretical course. We dove straight into building a real RAG (Retrieval-Augmented Generation) system from scratch.
+**I Just completed Module 1 of the LLM Zoomcamp by DataTalks.Club, and wow - what a practical introduction to the world of Large Language Models! This wasn't your typical theoretical course. We dove straight into building a real RAG (Retrieval-Augmented Generation) system from scratch.**
 
 ## What's RAG and Why Should You Care?
 
@@ -21,10 +21,20 @@ Before jumping into the technical details, let me explain what RAG actually is. 
 The idea is simple but powerful:
 
 1. **Retrieve** relevant information from a knowledge base
+
+- This involves searching through your knowledge base (which could be vector databases, document stores, or other repositories) to find the most relevant pieces of information based on the user's query. The quality of retrieval often depends on how well you've embedded and indexed your documents, and what similarity metrics you use.
+
 2. **Augment** the user's question with this context
+
+- This is where you take the user's original question and enrich it with the context you've retrieved. This step is crucial because it provides the LLM with specific, relevant information it can use to generate a more accurate and grounded response.
+
 3. **Generate** an answer based on the retrieved information
 
+- Finally, the **LLM** uses both the original question and the retrieved context to produce an answer that's informed by your knowledge base rather than relying solely on its training data.
+
+```console
 It's like giving the AI a cheat sheet before an exam.
+```
 
 ## The Architecture We Built
 
@@ -34,13 +44,78 @@ Our RAG system had three main components:
 
 We used ElasticSearch as our search engine to store and retrieve documents. The dataset? All the FAQ documents from DataTalks.Club courses - perfect for building a course assistant.
 
+#### What is Elasticsearch?
+
+**Elasticsearch** is a distributed, RESTful search and analytics engine built on Apache Lucene. It's designed to handle large volumes of data and provide near real-time search capabilities. Think of it as Google for your application data – it can index documents, analyze text, and return relevant results in milliseconds.
+
+**<span style="color:blue">Key Elasticsearch Concepts:</span>**
+
+- **Index**: A collection of documents (like a database)
+- **Document**: A JSON object containing your data
+- **Field**: Individual properties within a document
+- **Query**: Instructions for finding matching documents
+- **Score**: Relevance ranking of search results
+
+The **multi-match** query used for searching across multiple fields simultaneously. Instead of searching just one field, you can search across title, content, tags, and any other fields in your documents.
+
+**Field boosting** allows you to assign different weights to different fields, making some fields more important than others in determining relevance scores.
+
+#### Multi-Match Types: Focus on "best_fields"
+
+Elasticsearch offers several multi-match types, each with different scoring behaviors:
+
+1. **best_fields** (Default)
+
+The `best_fields` type finds documents where any field matches and uses the highest-scoring field to calculate the overall score.
+When to use: When you want the best matching field to dominate the score, perfect for scenarios where a strong match in one field (like title) should rank higher than weak matches across multiple fields.
+
+```python
+json{
+  "multi_match": {
+    "query": "How do copy a file to a Docker container?",
+    fields": ["question^4", "text"],
+    "type": "best_fields"
+  }
+}
+```
+
+2. **`most_fields`**
+   Combines scores from all matching fields, favoring documents that match across multiple fields.
+3. `cross_fields`
+   Treats all fields as one big field, useful when query terms might be split across different fields.
+4. `phrase` and `phrase_prefix`
+   For exact phrase matching across fields.
+
 ### 2. Retrieval System
 
-When a user asks a question, we search through the indexed documents to find the most relevant information. This becomes the "context" for our LLM.
+The Retrieval System acts as the bridge between your user's question and ElasticSearch.
+
+**<span style="color:blue">When a user asks a question, this component:</span>**
+
+- **Processes the query:** Takes the user's natural language question and potentially reformulates or cleans it for better search performance
+- **Executes the search:** Sends the query to ElasticSearch using appropriate search parameters (like match queries, filters, or more complex search strategies)
+- **Ranks and filters results:** ElasticSearch returns multiple documents with relevance scores, and your retrieval system decides which ones are most relevant
+- **Extracts context:** Pulls out the specific text chunks or passages from the retrieved documents that are most likely to contain the answer
+- **Formats for generation:** Prepares the retrieved information in a format that can be effectively used by the LLM in the next step
+
+**The retrieval system essentially determines what information gets passed to the LLM, making it critical for answer quality.**
+
+```console
+When a user asks a question, we search through the indexed documents to find the
+most relevant information. This becomes the "context" for our LLM.
+```
 
 ### 3. Generation (groq API)
 
 Finally, we send both the user's question and the retrieved context to an LLM (groq's LLAMA models) to generate a comprehensive answer.
+
+**<span style="color:blue">The Generation component uses the Groq API to create the final answer by:</span>**
+
+- **Combining context with query:** Takes the user's original question and the relevant context retrieved from ElasticSearch
+- **Prompt engineering:** Structures this information into a well-formatted prompt that instructs the LLM how to generate a helpful response
+- **API call to Groq:** Sends the augmented prompt to Groq's fast inference API
+- **Response processing:** Receives the generated answer and potentially post-processes it (formatting, validation, etc.)
+- **Grounded responses:** The LLM generates answers based on the specific retrieved documents rather than just its general training knowledge
 
 ## Let's dive right in
 
@@ -64,13 +139,26 @@ docker run -it \
 The course provided a JSON file with FAQ data from various DataTalks.Club courses. I had to:
 
 - Parse the JSON documents
+
+```python
+import json
+with open('documents-llm.json', 'rt') as f_in:
+    docs_raw = json.load(f_in)
+
+documents = []
+
+for course_dict in docs_raw:
+    for doc in course_dict['documents']:
+        doc['course'] = course_dict['course']
+        documents.append(doc)
+```
+
 - Create an ElasticSearch index with proper mappings
-- Ingest all documents into the search engine
 
 ```python
 from elasticsearch import Elasticsearch
 
-es_client = Elasticsearch("http://127.0.0.1:9200")
+es_client = Elasticsearch('http://localhost:9200')
 
 # Create index with custom settings
 index_settings = {
@@ -87,31 +175,50 @@ index_settings = {
         }
     }
 }
+
+index_name = "course-questions"
 ```
+
+- Ingest all documents into the search engine
 
 ### Building the Search Function
 
 The search function was where the magic happened. We used ElasticSearch's multi-match query to search across multiple fields with different weights:
 
 ```python
-def search_documents(query):
+def elastic_search(query):
+
     search_query = {
-        "size": 5,
-        "query": {
-            "bool": {
-                "must": {
-                    "multi_match": {
-                        "query": query,
-                        "fields": ["question^3", "text", "section"],
-                        "type": "best_fields"
+            "size": 5,
+            "query": {
+                "bool": {
+                    "must": {
+                        "multi_match": {
+                            "query": query,
+                            "fields": ["question^3", "text", "section"],
+                            "type": "best_fields"
+                        }
+                    },
+                    "filter": {
+                        "term": {
+                            "course": "llm-zoomcamp"
+                        }
                     }
                 }
             }
         }
-    }
 
-    response = es_client.search(index="course_questions", body=search_query)
-    return [hit["_source"] for hit in response["hits"]["hits"]]
+    response = es_client.search(index=index_name, body=search_query)
+
+    result_docs = []
+
+    for hit in response['hits']['hits']:
+        result_docs.append({
+            'source': hit['_source'],
+            'score': hit['_score']
+            })
+
+    return result_docs
 ```
 
 Notice the `^3` in `"question^3"` - this gives the question field 3x more weight than other fields. Smart!
@@ -126,52 +233,175 @@ This was probably the most interesting part. We had to craft prompts that would:
 
 ```python
 def build_prompt(query, search_results):
+    prompt_template = """
+    You're a course teaching assistant. Answer the QUESTION based on the CONTEXT from the FAQ database.
+    Use only the facts from the CONTEXT when answering the QUESTION.
+
+    QUESTION: {question}
+
+    CONTEXT:
+    {context}
+    """.strip()
+
     context = ""
+
     for doc in search_results:
-        context += f'Q: {doc["question"]}\nA: {doc["text"]}\n\n'
+        context = context + f"section: {doc['section']}\nquestion: {doc['question']}\nanswer: {doc['text']}\n\n"
 
-    prompt = f"""
-You're a course teaching assistant. Answer the QUESTION using only the provided CONTEXT.
-
-QUESTION: {query}
-
-CONTEXT:
-{context}
-"""
+    prompt = prompt_template.format(question=query, context=context).strip()
     return prompt
 ```
 
 ### Putting It All Together
 
+We used a function to generate answer using groq's LLAMA LLM with the given prompt context.
+
 The final RAG function combined everything:
 
 ```python
+
+def llm(prompt):
+    response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ],
+
+)
+
+    return response.choices[0].message.content
+
+
 def rag(query):
     # 1. Retrieve relevant documents
-    search_results = search_documents(query)
+    search_results = search(query)
 
     # 2. Build prompt with context
     prompt = build_prompt(query, search_results)
 
     # 3. Generate answer using OpenAI
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1
-    )
+    answer = llm(prompt)
 
-    return response.choices[0].message.content
+    return answer
 ```
 
-## Testing the System
+## Let's test our RAG implementation
 
-The moment of truth! I tested it with questions like:
+- **query = "How do copy a file to a Docker container?"**
 
-- "How do I run Kafka?"
-- "What's the difference between batch and streaming processing?"
-- "How do I submit homework?"
+```python
+context_template = """
+Q: {question}
+A: {text}
+""".strip()
+
+context = ""
+
+
+for doc in result_docs:
+    context += context_template.format(question=doc['source']['question'],text=doc['source']['text'])+"\n\n"
+
+
+prompt_template = """
+You're a course teaching assistant. Answer the QUESTION based on the CONTEXT from the FAQ database.
+Use only the facts from the CONTEXT when answering the QUESTION.
+
+QUESTION: {question}
+
+CONTEXT:
+{context}
+""".strip()
+
+
+prompt = prompt_template.format(question=query,context=context)
+
+response = client.chat.completions.create(
+...
+)
+
+answer = response.choices[0].message.content
+print(answer)
+```
+
+**This is the answer our model returns**
+
+```console
+To copy a file to a Docker container, you can use the `docker cp` command. The basic syntax is as follows:
+`docker cp /path/to/local/file container_id:/path/in/container`
+
+You can find the `container_id` by running the `docker ps` command.
+```
 
 And it worked! The system would find relevant FAQ entries and generate coherent, accurate answers based on the course materials.
+
+## What is tiktoken?
+
+**Tiktoken** is OpenAI's tokenization library that converts text into tokens - the basic units that language models process. Understanding tokenization is crucial for RAG systems because:
+
+- APIs charge by tokens
+- Models have token limits
+- Token count affects context window management
+
+```python
+import tiktoken
+
+encoding = tiktoken.encoding_for_model("gpt-4o")
+```
+
+This creates an encoder specifically for GPT-4o, which is important because:
+
+- Different models use different tokenization schemes
+- Token counts can vary between models
+- Ensures accurate token counting for your specific model
+
+Encoding and Analyzing Text
+
+```python
+tokens = encoding.encode(prompt)
+print(f"Number of tokens: {len(tokens)}")
+print(f"Tokens: {tokens}")
+print(f"Decoded tokens: {[encoding.decode([token]) for token in tokens]}")
+```
+
+This code:
+
+- Encodes your prompt into a list of token IDs (integers)
+- Counts tokens - essential for staying within API limits
+- Shows token IDs - the numerical representation the model sees
+- Decodes each token - reveals how the text was split (words, parts of words, punctuation, etc.)
+
+```console
+Number of tokens: 309
+Tokens: [63842, 261, 4165, 14029, 29186, 13, 30985, 290, 150339, 4122, 402, 290, 31810, 8099, 591, 290, 40251, 786
+...]
+Decoded tokens: ["You're", ' a', ' course', ' teaching', ' assistant', '.', ' Answer', ' the', ' QUESTION', ' based'
+...]
+```
+
+Reverse Token Lookup
+
+```python
+token_bytes = encoding.decode_single_token_bytes(63842)
+token_text = token_bytes.decode('utf-8')
+```
+
+This demonstrates:
+
+- Single token decoding - takes a specific token ID (63842) and converts it back to text
+- Byte-level handling - shows tiktoken works at the byte level before converting to UTF-8 text
+
+```python
+token_text
+```
+
+prints
+
+```console
+"You're"
+```
 
 ## Key Insights and Challenges
 
@@ -179,7 +409,6 @@ And it worked! The system would find relevant FAQ entries and generate coherent,
 
 - **ElasticSearch's multi-match queries** were incredibly effective for finding relevant documents
 - **Prompt engineering** made a huge difference in response quality
-- **Temperature settings** (I used 0.1) helped keep responses consistent and factual
 
 ### The "Aha!" Moments
 

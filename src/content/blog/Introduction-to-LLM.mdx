@@ -4,13 +4,15 @@ description: 'My hands-on experience with Module 1 of LLM Zoomcamp - from settin
 pubDate: '2025-06-16'
 heroImage: '../../assets/images/diagram-retrieval-augmented-generation.png'
 category: 'Machine Learning'
-tags: ['LLM', 'RAG', 'ElasticSearch', 'groq', 'Python', 'Vector Search', 'AI', 'Zoomcamp']
+tags: ['LLM', 'RAG', 'ElasticSearch', 'Groq', 'Python', 'Vector Search', 'AI', 'Zoomcamp']
 draft: false
 ---
 
 # LLM Zoomcamp Module 1: Introduction to LLMs and RAG
 
-## **Overview**![](/src/assets/images/rag-system-diagram.svg)
+## **Overview**
+
+![RAG System Diagram](/src/assets/images/rag-system-diagram.svg)
 
 **I Just completed Module 1 of the LLM Zoomcamp by DataTalks.Club, and wow - what a practical introduction to the world of Large Language Models! This wasn't your typical theoretical course. We dove straight into building a real RAG (Retrieval-Augmented Generation) system from scratch.**
 
@@ -293,18 +295,22 @@ def rag(query):
 - **query = "How do copy a file to a Docker container?"**
 
 ```python
+# Template for formatting each retrieved document as Q&A pairs
+# This creates a consistent format for the LLM to understand the context
 context_template = """
 Q: {question}
 A: {text}
 """.strip()
 
+# Initialize empty string to build the full context from all retrieved documents
 context = ""
 
-
+# Loop through all documents returned by ElasticSearch
 for doc in result_docs:
     context += context_template.format(question=doc['source']['question'],text=doc['source']['text'])+"\n\n"
 
-
+# Main prompt template that instructs the LLM how to behave
+# Sets role as teaching assistant and establishes rules for answering
 prompt_template = """
 You're a course teaching assistant. Answer the QUESTION based on the CONTEXT from the FAQ database.
 Use only the facts from the CONTEXT when answering the QUESTION.
@@ -315,13 +321,18 @@ CONTEXT:
 {context}
 """.strip()
 
-
+# Combine the user's question with all the retrieved context
+# This creates the final prompt that will be sent to the LLM
 prompt = prompt_template.format(question=query,context=context)
+
+# Send the augmented prompt to the LLM via Groq API
+# The LLM now has both the question and relevant context to generate an answer
 
 response = client.chat.completions.create(
 ...
 )
 
+# Extract the generated answer from the API response
 answer = response.choices[0].message.content
 print(answer)
 ```
